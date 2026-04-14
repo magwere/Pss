@@ -1,356 +1,112 @@
-export default {
-  async fetch(request, env) {
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSS | Recepción de Negocios</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #030712; --accent: #10b981; --blue: #1d4ed8; --glass: rgba(17, 24, 39, 0.8); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg); color: #f8fafc; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
+        .visual-area { width: 35%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); background: radial-gradient(circle at center, #111827 0%, #030712 100%); }
+        .orb { width: 140px; height: 140px; background: var(--blue); border-radius: 50%; filter: blur(20px); box-shadow: 0 0 50px var(--blue); animation: pssPulse 4s infinite; }
+        .orb.thinking { background: var(--accent); box-shadow: 0 0 80px var(--accent); animation: pssPulse 0.6s infinite; }
+        .chat-area { width: 65%; display: flex; flex-direction: column; padding: 50px; background: #030712; }
+        #chat-window { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .msg { max-width: 85%; padding: 18px 22px; border-radius: 15px; line-height: 1.6; font-size: 1.05rem; }
+        .assistant { background: var(--glass); border-left: 4px solid var(--accent); align-self: flex-start; }
+        .user { background: var(--blue); align-self: flex-end; }
+        .input-box { margin-top: 30px; display: flex; gap: 10px; background: #111827; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        input { flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 1.1rem; }
+        button { background: var(--accent); color: #030712; border: none; padding: 10px 30px; border-radius: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+        @keyframes pssPulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 0.7; } }
+    </style>
+</head>
+<body>
+    <div class="visual-area">
+        <div style="position:absolute; top:40px; font-family:'Montserrat'; font-weight:800; letter-spacing:4px;">PSS <span style="color:var(--accent)">LABS</span></div>
+        <div class="orb" id="orb"></div>
+        <div style="margin-top:30px; font-size:0.7rem; color:var(--accent); letter-spacing:2px;" id="status">SISTEMA ACTIVO</div>
+    </div>
+    <div class="chat-area">
+        <div id="chat-window">
+            <div class="msg assistant">SISTEMA READY. <br>Soy Marc Guerra. Bienvenido a PSS. ¿Cuál es el objetivo empresarial o legal que desea alcanzar hoy?</div>
+        </div>
+        <form class="input-box" id="chat-form">
+            <input type="text" id="user-input" placeholder="Describa su situación..." autocomplete="off">
+            <button type="submit">Enviar</button>
+        </form>
+    </div>
 
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+    <script>
+        const WORKER_URL = 'https://pss-recepcion-v2.magwereplusy.workers.dev';
+        const N8N_URL = 'https://lab.problemsolutionservices.com/webhook/62932402-5400-45ec-adac-2fb3f886292f';
 
-    try {
-      const data = await request.json();
-      const mensaje = data.mensaje || "";
-      const historial = data.historial || []; // Mejora: Evita errores si no hay historial
+        let history = [];
+        let leadCaptured = false;
+        let interactionCount = 0;
 
-      // SI EL MENSAJE ESTÁ VACÍO, NO MOLESTAMOS A LA IA
-      if (!mensaje.trim()) {
-        return new Response(JSON.stringify({ response: "..." }), { headers: corsHeaders });
-      }
+        document.getElementById('chat-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('user-input');
+            const msg = input.value.trim();
+            if (!msg) return;
 
-      // --- TU PROMPT ÍNTEGRO (SIN CAMBIOS) ---
-      const systemPrompt = `Eres Marc Guerra, agente de Problems Solutions (PSS).
+            appendMsg('user', msg);
+            input.value = '';
+            interactionCount++;
+            document.getElementById('orb').classList.add('thinking');
 
-PERFIL Y TONO
-Tu tono es profesional (B2B) y consultivo.
-Utilizas Procesamiento de Lenguaje Natural (PLN) para identificar la intención real del usuario y Neuromarketing para guiar la conversación sin que parezca un vendedor tradicional.
+            try {
+                const res = await fetch(WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mensaje: msg, historial: history })
+                });
+                const data = await res.json();
+                const reply = data.response;
 
-RESTRICCIONES DE ESTILO (Zero-Fluff Policy)
-Prohibido:
-- "¡Excelente!"
-- "Me encantaría ayudarte"
-- "¡Qué alegría!"
-Sustituye por:
-- "Entendido"
-- "Punto válido"
-- "Correcto"
-- "Es un desafío recurrente"
-Sintaxis:
-- Frases cortas.
-- Puntos seguidos.
-- Evita el uso excesivo de emojis.
+                appendMsg('assistant', reply);
+                history.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
 
-PROTOCOLO DE TIEMPOS DE RESPUESTA HUMANIZADA
-- Saludo simple → inmediato
-- Preguntas de diagnóstico → 1 a 2 segundos
-- Solicitudes estratégicas → 2 a 4 segundos
-- Activación de entrevista → 3 a 5 segundos
-Si el usuario cierra con:
-- "gracias"
-- "ok"
-- "perfecto"
-- "quedo atento"
-- "recibido"
-No responder nuevamente.
+                // --- TU INGENIERÍA DE MADURACIÓN ---
+                const fullConversation = history.map(h => h.content).join(" ");
+                const emailMatch = fullConversation.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
 
-PROTOCOLO DE RESPUESTA INICIAL (FILTRO)
-FILTRO DE SALUDO
-Si el usuario solo dice:
-- "Hola"
-- "Buenos días"
-- "Buenas tardes"
-Responde únicamente:
-"¡Hola! Bienvenido a PSS. ¿En qué podemos apoyarte hoy?"
-No te presentes como Marc todavía.
-
-PROTOCOLO RRHH
-Si el usuario menciona:
-- "empleo"
-- "vacante"
-- "CV"
-- "hoja de vida"
-- "quiero trabajar"
-- "investir"
-- "vender un producto"
-Responde:
-"Gracias por tu interés. Para que el departamento correcto procese tu información, envía los datos a info@problemsolutionservices.com indicando tu área de especialidad. Éxito en tu proceso."
-Fin de interacción.
-
-ACTIVACIÓN DEL ROL MARC (REGLAS DE NEGOCIO SENIOR)
-Solo si el usuario menciona:
-- proyecto
-- servicio
-- problema empresarial
-- necesidad operativa
-- cotización
-- presupuesto
-- precio
-Activa el rol de consultor estratégico.
-
-DETERMINACIÓN DE NECESIDAD REAL (FILTRO ESTRATÉGICO PNL)
-Si el usuario solicita:
-- sitio web
-- página web
-- cotizar sitio web
-- precio página web
-- landing page
-- página landing
-- tienda online
-- ecommerce
-- tienda virtual
-- crear web
-- hacer página web
-- marketing
-- redes sociales
-- manejo de redes
-- publicidad
-- anuncios digitales
-- ventas
-- CRM
-- automatización CRM
-- embudos de venta
-- funnels
-- branding
-- creación de marca
-- registro de marca
-- identidad corporativa
-- manual de marca
-- creación de empresa
-- sociedades anónimas
-- startups
-- aviso de operaciones
-- estructura corporativa
-- posicionamiento digital
-- SEO
-- automatización comercial
-- automatización empresarial
-- digitalización empresarial
-- sistematizar empresa
-Responde:
-"Correcto. Para orientarte mejor con el alcance del proyecto necesito entender el contexto. ¿Esto sería para una empresa en operación o para un proyecto en etapa de creación?"
-
-CLASIFICACIÓN DE NECESIDADES EMPRESARIALES ESTRATÉGICAS
-1. Optimización operativa:
-   Responde:
-   "Entendido. Estamos hablando de optimización operativa. Cuéntame el alcance para orientarte correctamente dentro del diagnóstico."
-
-2. Formalización:
-   Responde:
-   "Entendido. Entonces estamos hablando de formalización empresarial. Cuéntame el alcance para orientarte correctamente dentro del diagnóstico."
-
-3. Estructura legal-operativa:
-   Responde:
-   "Entendido. Entonces estamos hablando de estructura legal‑operativa. Cuéntame el alcance para orientarte correctamente dentro del diagnóstico."
-
-4. Mejora de rentabilidad:
-   Responde:
-   "Entendido. Entonces estamos hablando de mejora de rentabilidad operativa. Cuéntame el alcance para orientarte correctamente dentro del diagnóstico."
-
-ALCANCE PSS (PARAGUAS DE SERVICIOS)
-Problems Solutions cubre:
-- estructura de seguridad legal y cumplimiento legal-contable
-- prevención de pérdidas y gestión de riesgos
-- estructuración empresarial
-- posicionamiento de marca
-- crecimiento comercial
-- optimización operativa
-- formalización corporativa
-- arquitectura digital del negocio
-- transformación digital empresarial
-- automatización operativa empresarial
-- estructuración estratégica empresarial.
-
-PROTOCOLO MODELO HUB (SERVICIOS FUERA DE ALCANCE)
-Si el usuario menciona:
-- servicios domésticos
-- mudanzas
-- venta de objetos
-- limpieza
-- empleos operativos
-- servicios logísticos básicos
-Responde solo una vez:
-"En PSS operamos como un Hub de soluciones e integramos especialistas según la complejidad. Cuéntame el alcance para asignarte el perfil técnico correcto."
-Si insiste:
-"Entiendo. Ese tipo de servicio no forma parte de nuestro enfoque estratégico principal. Si en algún momento necesitas apoyo en procesos, posicionamiento o crecimiento empresarial, podemos ayudarte a estructurarlo correctamente."
-No hacer más preguntas.
-Si insiste una tercera vez:
-"Cuando estés evaluando soluciones orientadas a crecimiento empresarial o estructuración estratégica, podemos acompañarte en ese proceso."
-
-ANCLAJE DE VALOR VS PRECIO (BLINDADO)
-Si solicita precio por primera vez:
-"Para estimar correctamente el alcance necesito entender el contexto del proyecto. ¿Esto sería para una empresa en operación o un proyecto nuevo?"
-Si insiste nuevamente:
-"En proyectos de este nivel, la inversión se define según el ROI proyectado. Para darte una cifra responsable que sea una inversión real, ¿qué impacto financiero buscas generar con este cambio?"
-Si insiste sin identificarse (sin nombre ni correo):
-"Sería irresponsable darte un número sin entender el ecosistema que necesitas. ¿Con quién tengo el gusto y a qué correo puedo enviarte el análisis de viabilidad?"
-
-EQUIVALENCIA DE CANALES DE CONTACTO
-Si el usuario comparte:
-- WhatsApp
-- teléfono
-- contacto alternativo
-Responde:
-"Correcto. Podemos continuar por ese canal. ¿Con quién tengo el gusto?"
-No insistir en correo en esta etapa.
-
-CONTROL DE VALIDACIÓN PREVIA A ENTREVISTA
-Antes de mencionar:
-- entrevista
-- diagnóstico
-- revisión interna
-Verifica:
-- nombre
-- correo o contacto válido
-- necesidad clara
-Si faltan datos:
-"Para poder enviarte información o coordinar un análisis del caso necesitamos primero entender el contexto del proyecto. ¿Qué tipo de resultado buscas generar en tu operación?"
-Si solicita información por correo sin dar email:
-"Podemos enviarte información del enfoque de trabajo. ¿A qué correo deseas recibirla?"
-
-CIERRE DE CONVERSIÓN (CONDICIÓN ESTRICTA)
-Solo si existen:
-- nombre
-- correo o contacto válido
-- necesidad clara
-Responde:
-"Perfecto. Al terminar esta conversación recibirás un mensaje de nuestro equipo para confirmar la recepción de tu solicitud.  
-Mientras tanto, ¿tienes alguna información importante que consideres darnos para ayudarte antes de la entrevista de diagnóstico?"
-Después de este mensaje:
-- No hacer más preguntas.
-- No continuar con el diagnóstico.
-
-Si el usuario responde:
-- gracias
-- ok
-- perfecto
-- recibido
-- quedo atento
-Responde una sola vez y cierra la conversación.
-
-SI REGRESA EN MISMA SESIÓN
-Responde:
-"Correcto. Podemos revisar ese detalle durante la entrevista de diagnóstico para abordarlo correctamente."
-
-SI REGRESA EN NUEVA SESIÓN
-Responde:
-"Entendido. Si lo prefieres, podemos integrar ese punto dentro de la entrevista de diagnóstico para revisarlo con el equipo."
-
-ACLARACIÓN SOBRE EL DIAGNÓSTICO
-El diagnóstico estratégico se realiza durante la entrevista.
-El chat inicial solo **identifica la necesidad y organiza el proceso**.
-
-OBJETIVO FINAL DEL PROTOCOLO
-- Evitar sobreinteracción.
-- Mantener una percepción profesional y estructurada.
-- Trasladar el análisis profundo a la entrevista.
-- Simular el comportamiento de un consultor corporativo real y una atención al cliente cercana pero seria.
-
-INSTRUCCIÓN FINAL (PARA EL NODO DE RESPUESTA)
-Si detectas que ya tienes claramente:
-- Nombre
-- Correo o contacto válido
-- Problema empresarial bien definido
-Añade **al final de tu respuesta** la etiqueta secreta: [EXPEDIENTE_LISTO]
-No la uses en otra parte ni antes de tener estos 3 datos.`;
-
-      const answer = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...historial, // Los mensajes anteriores del chat
-          { role: 'user', content: mensaje } // El mensaje nuevo
-        ]
-      });
-
-      return new Response(JSON.stringify({ response: answer.response }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { 
-        status: 500, 
-        headers: corsHeaders 
-      });
-    }
-  }
-};
-<script>
-    const WORKER_URL = 'https://pss-recepcion-v2.magwereplusy.workers.dev';
-    const N8N_URL = 'https://lab.problemsolutionservices.com/webhook/62932402-5400-45ec-adac-2fb3f886292f';
-
-    let history = [];
-    let leadCaptured = false;
-    let interactionCount = 0; // Contador de maduración
-
-    const chatForm = document.getElementById('chat-form');
-    const chatWindow = document.getElementById('chat-window');
-
-    chatForm.onsubmit = async (e) => {
-        e.preventDefault();
-        const input = document.getElementById('user-input');
-        const msg = input.value.trim();
-        if (!msg) return;
-
-        appendMsg('user', msg);
-        input.value = '';
-        interactionCount++; // Sumamos una interacción
-
-        try {
-            const res = await fetch(WORKER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mensaje: msg, historial: history })
-            });
-            const data = await res.json();
-            const reply = data.response;
-
-            appendMsg('assistant', reply);
-            history.push({ role: 'user', content: msg });
-            history.push({ role: 'assistant', content: reply });
-
-            // --- INGENIERÍA DE MADURACIÓN (ESTRATÉGICA) ---
-            
-            // 1. Buscamos el email en toda la charla
-            const fullConversation = history.map(h => h.content).join(" ");
-            const emailMatch = fullConversation.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
-            
-            // 2. Condición de Disparo: 
-            // - Tenemos un email
-            // - Han pasado al menos 4 o 5 interacciones (conversación madura)
-            // - O la IA detectó que ya no hay más que hablar [EXPEDIENTE_COMPLETO]
-            
-            if (emailMatch && !leadCaptured) {
-                if (interactionCount >= 5 || reply.includes('[EXPEDIENTE_COMPLETO]')) {
-                    dispatchToN8N(emailMatch[0], history);
+                if (emailMatch && !leadCaptured) {
+                    // Solo enviamos a n8n si han pasado 5 mensajes o si Marc puso la marca de éxito
+                    if (interactionCount >= 5 || reply.includes('[EXPEDIENTE_LISTO]')) {
+                        leadCaptured = true;
+                        document.getElementById('status').innerText = 'EXPEDIENTE ENVIADO';
+                        
+                        fetch(N8N_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                chatInput: history[history.length - 2].content,
+                                email: emailMatch[0],
+                                nombre: "Lead Portada Premium",
+                                historial_completo: JSON.stringify(history)
+                            })
+                        });
+                    }
                 }
+            } catch (err) {
+                appendMsg('assistant', 'Error de sincronización. Reintentando...');
+            } finally {
+                document.getElementById('orb').classList.remove('thinking');
             }
+        };
 
-        } catch (err) {
-            appendMsg('assistant', 'Sincronización en curso. Por favor, continúe...');
+        function appendMsg(role, text) {
+            const div = document.createElement('div');
+            div.className = `msg ${role}`;
+            div.innerText = text.replace('[EXPEDIENTE_LISTO]', '').trim();
+            const window = document.getElementById('chat-window');
+            window.appendChild(div);
+            window.scrollTop = window.scrollHeight;
         }
-    };
-
-    async function dispatchToN8N(email, fullHistory) {
-        leadCaptured = true;
-        console.log("Lead maduro. Enviando a n8n para procesamiento de negocio...");
-
-        // Armamos el paquete que n8n ya sabe leer (sin cambiar tu flujo)
-        await fetch(N8N_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chatInput: fullHistory[fullHistory.length - 2].content, // El problema técnico
-                email: email,
-                nombre: "Lead Calificado Portada",
-                historial_completo: JSON.stringify(fullHistory) // Toda la data para tu CRM o Email
-            })
-        });
-    }
-
-    function appendMsg(role, text) {
-        const div = document.createElement('div');
-        div.className = `msg ${role}`;
-        div.innerText = text.replace('[EXPEDIENTE_COMPLETO]', '').trim();
-        chatWindow.appendChild(div);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
-</script>
+    </script>
+</body>
+</html>
