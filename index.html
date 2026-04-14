@@ -273,130 +273,84 @@ No la uses en otra parte ni antes de tener estos 3 datos.`;
     }
   }
 };
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+<script>
+    const WORKER_URL = 'https://pss-recepcion-v2.magwereplusy.workers.dev';
+    const N8N_URL = 'https://lab.problemsolutionservices.com/webhook/62932402-5400-45ec-adac-2fb3f886292f';
 
-  /* 1. CONFIGURACIÓN FIREBASE */
-  const firebaseConfig = {
-    apiKey: "AIzaSyCETd32nN4mhaqXvrJsAhWWU0euT-KXzv0",
-    authDomain: "studio-8152609190-513ee.firebaseapp.com",
-    projectId: "studio-8152609190-513ee",
-    storageBucket: "studio-8152609190-513ee.firebasestorage.app",
-    messagingSenderId: "391569117120",
-    appId: "1:391569117120:web:b2c07944de50726e8ac225"
-  };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    let history = [];
+    let leadCaptured = false;
+    let interactionCount = 0; // Contador de maduración
 
-  /* 2. CONFIGURACIÓN PSS E IA */
-  const WORKER_URL = 'https://pss-recepcion-v2.magwereplusy.workers.dev';
-  const N8N_URL = 'https://lab.problemsolutionservices.com/webhook/62932402-5400-45ec-adac-2fb3f886292f';
-  
-  let aiHistory = [];
-  let leadSent = false;
-  let detectedEmail = null;
+    const chatForm = document.getElementById('chat-form');
+    const chatWindow = document.getElementById('chat-window');
 
-  const chatForm = document.getElementById('ai-chat-form');
-  const chatWindow = document.getElementById('ai-chat-window');
-  const orb = document.getElementById('ai-orb');
-
-  if (chatForm) {
     chatForm.onsubmit = async (e) => {
-      e.preventDefault();
-      const input = chatForm.querySelector('input');
-      const msg = input.value.trim();
-      if (!msg) return;
+        e.preventDefault();
+        const input = document.getElementById('user-input');
+        const msg = input.value.trim();
+        if (!msg) return;
 
-      appendMessage('user', msg);
-      input.value = '';
-      if (orb) orb.classList.add('ai-thinking');
+        appendMsg('user', msg);
+        input.value = '';
+        interactionCount++; // Sumamos una interacción
 
-      // Escaneo de email
-      const emailMatch = msg.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
-      if (emailMatch) detectedEmail = emailMatch[0];
+        try {
+            const res = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mensaje: msg, historial: history })
+            });
+            const data = await res.json();
+            const reply = data.response;
 
-      try {
-        const res = await fetch(WORKER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mensaje: msg, historial: aiHistory })
-        });
+            appendMsg('assistant', reply);
+            history.push({ role: 'user', content: msg });
+            history.push({ role: 'assistant', content: reply });
 
-        const data = await res.json();
-        const reply = data.response;
+            // --- INGENIERÍA DE MADURACIÓN (ESTRATÉGICA) ---
+            
+            // 1. Buscamos el email en toda la charla
+            const fullConversation = history.map(h => h.content).join(" ");
+            const emailMatch = fullConversation.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+            
+            // 2. Condición de Disparo: 
+            // - Tenemos un email
+            // - Han pasado al menos 4 o 5 interacciones (conversación madura)
+            // - O la IA detectó que ya no hay más que hablar [EXPEDIENTE_COMPLETO]
+            
+            if (emailMatch && !leadCaptured) {
+                if (interactionCount >= 5 || reply.includes('[EXPEDIENTE_COMPLETO]')) {
+                    dispatchToN8N(emailMatch[0], history);
+                }
+            }
 
-        appendMessage('assistant', reply);
-        aiHistory.push({ role: 'user', content: msg });
-        aiHistory.push({ role: 'assistant', content: reply });
-
-        // Lógica de Ficha Técnica
-        const sectorEl = document.getElementById('ai-sector');
-        if (sectorEl) {
-            if (msg.toLowerCase().includes('marca')) sectorEl.innerText = 'Propiedad Intelectual';
-            if (msg.toLowerCase().includes('empresa')) sectorEl.innerText = 'Constitución Legal';
+        } catch (err) {
+            appendMsg('assistant', 'Sincronización en curso. Por favor, continúe...');
         }
-
-        // 3. INGENIERÍA DE CAPTACIÓN: Disparo a n8n
-        // Se dispara si Marc da el OK o la charla ya es larga
-        if (detectedEmail && !leadSent && (reply.includes('[EXPEDIENTE_LISTO]') || aiHistory.length > 6)) {
-          leadSent = true;
-          
-          const leadData = {
-            email: detectedEmail,
-            chatInput: msg,
-            nombre: "Lead Consola Premium",
-            historial: aiHistory,
-            url_fuente: window.location.href
-          };
-
-          // FIX SENIOR: Se añaden headers para que n8n reciba el JSON correctamente
-          fetch(N8N_URL, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(leadData) 
-          }).catch(err => console.log("n8n procesando..."));
-
-          // Registro en Firebase
-          addDoc(collection(db, "leads"), { ...leadData, timestamp: new Date().toISOString() });
-          
-          const expedienteEl = document.getElementById('ai-expediente');
-          if (expedienteEl) {
-              expedienteEl.innerText = 'IDENTIFICADO - ENVIANDO';
-              expedienteEl.style.color = '#10b981';
-          }
-        }
-
-      } catch (err) {
-        appendMessage('assistant', '⚠️ Nodo PTY ocupado. Sincronizando de nuevo...');
-      } finally {
-        if (orb) orb.classList.remove('ai-thinking');
-      }
     };
-  }
 
-  function appendMessage(role, text) {
-    const div = document.createElement('div');
-    div.className = `message ${role}`;
-    // Usamos innerHTML por si la IA envía negritas o listas
-    div.innerHTML = text.replace('[EXPEDIENTE_LISTO]', '').trim();
-    chatWindow.appendChild(div);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-  }
+    async function dispatchToN8N(email, fullHistory) {
+        leadCaptured = true;
+        console.log("Lead maduro. Enviando a n8n para procesamiento de negocio...");
 
-  // FUNCIONES GLOBALES PARA BOTONES
-  window.openMarc = () => { 
-    const reception = document.getElementById('pss-ai-reception');
-    if (reception) {
-        reception.style.display = 'block'; 
-        document.body.style.overflow = 'hidden'; 
+        // Armamos el paquete que n8n ya sabe leer (sin cambiar tu flujo)
+        await fetch(N8N_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chatInput: fullHistory[fullHistory.length - 2].content, // El problema técnico
+                email: email,
+                nombre: "Lead Calificado Portada",
+                historial_completo: JSON.stringify(fullHistory) // Toda la data para tu CRM o Email
+            })
+        });
     }
-  };
-  window.closeMarc = () => { 
-    const reception = document.getElementById('pss-ai-reception');
-    if (reception) {
-        reception.style.display = 'none'; 
-        document.body.style.overflow = 'auto'; 
+
+    function appendMsg(role, text) {
+        const div = document.createElement('div');
+        div.className = `msg ${role}`;
+        div.innerText = text.replace('[EXPEDIENTE_COMPLETO]', '').trim();
+        chatWindow.appendChild(div);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
     }
-  };
 </script>
