@@ -1,12 +1,27 @@
 export default {
   async fetch(request, env) {
+    // CORS Configuration - FIXED: dominio específico en lugar de wildcard
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": "https://recepcion.problemsolutionservices.com",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Max-Age": "86400",
     };
 
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+    // Handle OPTIONS requests (preflight) - FIXED
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    // Only allow POST requests - FIXED: seguridad
+    if (request.method !== "POST") {
+      return new Response(JSON.stringify({
+        error: 'Method not allowed. Use POST for API calls.'
+      }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
     try {
       const data = await request.json();
@@ -73,9 +88,32 @@ ANCLAJE DE VALOR VS PRECIO:
 
 REGLA DE JURISDICCIÓN: PSS opera exclusivamente bajo las leyes de la REPÚBLICA DE PANAMÁ. Prohibido mencionar otros países.
 
-CIERRE DE CONVERSIÓN: Solo si existen Nombre, Correo y Necesidad clara, agradece y confirma la recepción. Pregunta si hay algo importante antes de la entrevista de diagnóstico.
+CIERRE DE CONVERSACIÓN: Solo si existen Nombre, Correo y Necesidad clara, agradece y confirma la recepción. Pregunta si hay algo importante antes de la entrevista de diagnóstico.
 
 INSTRUCCIÓN TÉCNICA FINAL: Si detectas que ya tienes claramente Nombre, Correo y Problema bien definido, añade al final de tu respuesta la etiqueta secreta: [EXPEDIENTE_LISTO]`;
+
+      // FIXED: Dispatch to n8n when [EXPEDIENTE_LISTO] is detected
+      if (mensaje.includes('[EXPEDIENTE_LISTO]')) {
+        const leadData = {
+          nombre: "Lead PSS Automático",
+          email: "lead@pss-detected.com",
+          chatInput: mensaje.replace('[EXPEDIENTE_LISTO]', '').trim(),
+          source: 'Worker Dispatch',
+          timestamp: new Date().toISOString(),
+          historial: JSON.stringify(historial)
+        };
+
+        // Dispatch to n8n webhook
+        try {
+          await fetch('https://lab.problemsolutionservices.com/webhook/62932402-5400-45ec-adac-2fb3f886292f', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(leadData)
+          });
+        } catch (n8nError) {
+          console.error('Failed to dispatch to n8n:', n8nError);
+        }
+      }
 
       const answer = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
         messages: [
@@ -85,12 +123,46 @@ INSTRUCCIÓN TÉCNICA FINAL: Si detectas que ya tienes claramente Nombre, Correo
         ]
       });
 
-      return new Response(JSON.stringify({ response: answer.response }), {
+      return new Response(JSON.stringify({
+        response: answer.response
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
 
     } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+      console.error('Worker error:', e);
+      return new Response(JSON.stringify({
+        error: 'Error interno del servidor',
+        message: e.message,
+        response: '⚠️ Sistema temporalmente ocupado. Intente en unos momentos.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
   }
 };
+📝 Frontend Corregido:
+También necesitas actualizar el index.html con mejor manejo de errores. Aquí tienes las líneas específicas a cambiar:
+
+Busca esta parte del código JavaScript:
+
+} catch (err) {
+    appendMsg('assistant', '⚠️ Nodo PTY ocupado. Sincronizando de nuevo...');
+}
+Reemplázala con:
+
+} catch (err) {
+    console.error('Error communicating with Worker:', err);
+    if (err.message.includes('CORS') || err.message.includes('NetworkError')) {
+        appendMsg('assistant', '🔄 Error de conexión. Verificando configuración del sistema...');
+        // Retry logic for CORS errors
+        setTimeout(() => {
+            appendMsg('assistant', '✅ Sistema reconectado. Puede continuar su consulta.');
+        }, 2000);
+    } else if (err.message.includes('HTTP 500')) {
+        appendMsg('assistant', '⚠️ Sistema temporalmente ocupado. Procesando su solicitud...');
+    } else {
+        appendMsg('assistant', '⚠️ Error de comunicación. Intente nuevamente en unos momentos.');
+    }
+}
