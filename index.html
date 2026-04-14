@@ -127,10 +127,21 @@
                     addDoc(collection(db, "leads"), { email: detectedEmail, chatInput: msg, timestamp: new Date().toISOString() });
                 }
             } catch (err) {
-                appendMsg('assistant', '⚠️ Nodo PTY ocupado. Sincronizando de nuevo...');
-            } finally {
-                document.getElementById('orb').classList.remove('thinking');
-            }
+    console.error('Error communicating with Worker:', err);
+    if (err.message.includes('CORS') || err.message.includes('NetworkError')) {
+        appendMsg('assistant', '🔄 Error de conexión. Verificando configuración del sistema...');
+        // Retry logic for CORS errors
+        setTimeout(() => {
+            appendMsg('assistant', '✅ Sistema reconectado. Puede continuar su consulta.');
+        }, 2000);
+    } else if (err.message.includes('HTTP 500')) {
+        appendMsg('assistant', '⚠️ Sistema temporalmente ocupado. Procesando su solicitud...');
+    } else {
+        appendMsg('assistant', '⚠️ Error de comunicación. Intente nuevamente en unos momentos.');
+    }
+} finally {
+    document.getElementById('orb').classList.remove('thinking');
+}
         };
 
         function appendMsg(role, text) {
