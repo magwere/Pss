@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSS Digital Reception</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left side - Intelligence Orb */
+        .orb-section {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .intelligence-orb {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #10b981 0%, #059669 70%, #047857 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 50px rgba(16, 185, 129, 0.5);
+            transition: all 0.5s ease;
+            animation: pulse 2s infinite;
+        }
+
+        .intelligence-orb.processing {
+            background: radial-gradient(circle, #3b82f6 0%, #2563eb 70%, #1d4ed8 100%);
+            box-shadow: 0 0 60px rgba(59, 130, 246, 0.7);
+            animation: processing-pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes processing-pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.08); }
+        }
+
+        .orb-content {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .orb-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .orb-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        /* Right side - Chat Interface */
+        .chat-section {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 1.5rem;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 1rem;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .ai-message {
+            align-self: flex-start;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .input-area {
+            padding: 1.5rem;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.8rem 1.2rem;
+            border-radius: 50px;
+            border: none;
+            background: rgba(15, 23, 42, 0.8);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-input:focus {
+            border-color: #10b981;
+        }
+
+        .send-button {
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            background: #10b981;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover {
+            background: #059669;
+            transform: scale(1.05);
+        }
+
+        .send-button:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status bar */
+        .status-bar {
+            padding: 0.8rem 1.5rem;
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            margin-right: 8px;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .dashboard {
+                flex-direction: column;
+            }
+            
+            .orb-section {
+                width: 100%;
+                padding: 1rem;
+            }
+            
+            .chat-section {
+                width: 100%;
+            }
+            
+            .intelligence-orb {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Left side - Intelligence Orb -->
+        <div class="orb-section">
+            <div class="intelligence-orb" id="intelligenceOrb">
+                <div class="orb-content">
+                    <div class="orb-title">MARC GUERRA</div>
+                    <div class="orb-subtitle">AI Receptionist</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right side - Chat Interface -->
+        <div class="chat-section">
+            <div class="chat-header">
+                <h2>Recepción Digital PSS</h2>
+                <p>Sistema de admisión consultiva</p>
+            </div>
+            
+            <div class="chat-container" id="chatContainer">
+                <div class="message ai-message">
+                    ¡Hola! Soy Marc Guerra, tu asistente de recepción digital. ¿En qué puedo ayudarte hoy?
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Escribe tu mensaje aquí..." autocomplete="off">
+                <button class="send-button" id="sendButton">Enviar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div>NODE: PANAMA_CITY</div>
+        <div>STATUS: <span class="status-indicator"></span>ENCRYPTED</div>
+    </div>
+
+    <script>
+        // Configuration
+        const INTELLIGENCE_URL = 'https://pss-recepcion-v2.magwereplusy.workers.dev';
+        const BUSINESS_URL = 'https://lab.problemsolutionservices.com/webhook/62932402-5400-45ec-adac-2fb3f886292f';
+        
+        // State management
+        let conversationHistory = [];
+        let messageCount = 0;
+        let emailDetected = null;
+        let nombreUsuario = null;
+        let expedienteListo = false;
+
+        // DOM Elements
+        const chatContainer = document.getElementById('chatContainer');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const intelligenceOrb = document.getElementById('intelligenceOrb');
+
+        // Initialize the app
+        function init() {
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            sendButton.addEventListener('click', sendMessage);
+        }
+
+        // Send message to chat
+        async function sendMessage() {
+            const userInput = chatInput.value.trim();
+            if (!userInput) return;
+            
+            // Add user message to chat
+            addMessageToChat(userInput, 'user');
+            chatInput.value = '';
+            
+            // Show processing state
+            intelligenceOrb.classList.add('processing');
+            sendButton.disabled = true;
+            
+            try {
+                // Detect email in user input
+                const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+                const emailMatch = userInput.match(emailRegex);
+                if (emailMatch) {
+                    emailDetected = emailMatch[0];
+                }
+                
+                // Track message count
+                messageCount++;
+                
+                // Prepare conversation history
+                conversationHistory.push({
+                    role: 'user',
+                    content: userInput
+                });
+                
+                // Call the AI endpoint
+                const response = await callIntelligenceAPI(conversationHistory);
+                
+                // Process the response
+                processAIResponse(response);
+                
+                // Check if we should dispatch to N8N
+                checkDispatchToN8N();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessageToChat('Ocurrió un error al procesar tu solicitud. Por favor, inténtalo de nuevo.', 'ai');
+            } finally {
+                intelligenceOrb.classList.remove('processing');
+                sendButton.disabled = false;
+            }
+        }
+
+        // Call the intelligence API
+        async function callIntelligenceAPI(history) {
+            const response = await fetch(INTELLIGENCE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messages: history,
+                    stream: false
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data.response || data.message || data.choices?.[0]?.message?.content || 'Lo siento, no pude procesar tu solicitud.';
+        }
+
+        // Process AI response
+        function processAIResponse(responseText) {
+            // Check if the response contains the secret marker
+            if (responseText.includes('[EXPEDIENTE_LISTO]')) {
+                expedienteListo = true;
+            }
+            
+            // Extract user name if mentioned in the response
+            const nameRegex = /(?:soy|me llamo|mi nombre es)\s+([A-Za-z\s]+)/i;
+            const nameMatch = responseText.match(nameRegex);
+            if (nameMatch && nameMatch[1]) {
+                nombreUsuario = nameMatch[1].trim();
+            }
+            
+            // Add AI response to chat
+            addMessageToChat(responseText, 'ai');
+            
+            // Add to conversation history
+            conversationHistory.push({
+                role: 'assistant',
+                content: responseText
+            });
+        }
+
+        // Add message to chat UI
+        function addMessageToChat(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(sender === 'user' ? 'user-message' : 'ai-message');
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Check if we should dispatch to N8N
+        function checkDispatchToN8N() {
+            // Dispatch if: email detected AND more than 4 messages OR expediente listo
+            if ((emailDetected && messageCount > 4) || expedienteListo) {
+                dispatchToN8N();
+            }
+        }
+
+        // Dispatch to N8N webhook
+        async function dispatchToN8N() {
+            console.log('Dispatching to N8N:', {
+                chatInput: conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content : '',
+                email_detectado: emailDetected,
+                nombre_usuario: nombreUsuario,
+                expediente_listo: expedienteListo,
+                message_count: messageCount
+            });
+            
+            try {
+                const response = await fetch(BUSINESS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chatInput: conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].content : '',
+                        email_detectado: emailDetected,
+                        nombre_usuario: nombreUsuario,
+                        expediente_listo: expedienteListo,
+                        message_count: messageCount,
+                        conversation_history: conversationHistory,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                if (!response.ok) {
+                    console.error('N8N dispatch failed:', response.status, response.statusText);
+                } else {
+                    console.log('Successfully dispatched to N8N');
+                }
+            } catch (error) {
+                console.error('Error dispatching to N8N:', error);
+            }
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
