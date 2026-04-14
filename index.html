@@ -3,109 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PSS | Recepción de Negocios</title>
+    <title>PSS | Digital Admission Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #030712; --accent: #10b981; --blue: #1d4ed8; --glass: rgba(17, 24, 39, 0.8); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background-color: var(--bg); color: #f8fafc; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
-        .visual-area { width: 35%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); background: radial-gradient(circle at center, #111827 0%, #030712 100%); }
+        
+        /* VISUAL CORE (LADO IZQUIERDO) */
+        .visual-area { width: 35%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); background: radial-gradient(circle at center, #111827 0%, #030712 100%); position: relative; }
         .orb { width: 140px; height: 140px; background: var(--blue); border-radius: 50%; filter: blur(20px); box-shadow: 0 0 50px var(--blue); animation: pssPulse 4s infinite; }
         .orb.thinking { background: var(--accent); box-shadow: 0 0 80px var(--accent); animation: pssPulse 0.6s infinite; }
+        
+        .ficha-tecnica { width: 85%; margin-top: 40px; background: var(--glass); border-radius: 12px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
+        .ficha-tecnica h3 { font-size: 0.7rem; letter-spacing: 2px; color: var(--accent); margin-bottom: 15px; text-transform: uppercase; }
+        .campo { margin-bottom: 12px; font-size: 0.85rem; }
+        .campo label { display: block; opacity: 0.5; font-size: 0.6rem; text-transform: uppercase; margin-bottom: 3px; }
+        .highlight { color: var(--accent) !important; font-weight: 700; }
+
+        /* CHAT AREA (LADO DERECHO) */
         .chat-area { width: 65%; display: flex; flex-direction: column; padding: 50px; background: #030712; }
-        #chat-window { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
-        .msg { max-width: 85%; padding: 18px 22px; border-radius: 15px; line-height: 1.6; font-size: 1.05rem; }
+        #chat-window { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; padding-right: 10px; }
+        #chat-window::-webkit-scrollbar { width: 3px; }
+        #chat-window::-webkit-scrollbar-thumb { background: #1e293b; }
+        .msg { max-width: 85%; padding: 18px 22px; border-radius: 15px; line-height: 1.6; font-size: 1.05rem; animation: fadeIn 0.3s ease; }
         .assistant { background: var(--glass); border-left: 4px solid var(--accent); align-self: flex-start; }
-        .user { background: var(--blue); align-self: flex-end; }
+        .user { background: var(--blue); align-self: flex-end; color: white; }
+
         .input-box { margin-top: 30px; display: flex; gap: 10px; background: #111827; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
-        input { flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 1.1rem; }
+        input { flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 1.1rem; padding: 5px; }
         button { background: var(--accent); color: #030712; border: none; padding: 10px 30px; border-radius: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+
         @keyframes pssPulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 0.7; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+
     <div class="visual-area">
         <div style="position:absolute; top:40px; font-family:'Montserrat'; font-weight:800; letter-spacing:4px;">PSS <span style="color:var(--accent)">LABS</span></div>
-        <div class="orb" id="orb"></div>
-        <div style="margin-top:30px; font-size:0.7rem; color:var(--accent); letter-spacing:2px;" id="status">SISTEMA ACTIVO</div>
+        <div class="orb" id="ai-orb"></div>
+        <div class="ficha-tecnica">
+            <h3>Protocolo de Admisión</h3>
+            <div class="campo"><label>Jurisdicción</label><span>🇵🇦 Ciudad de Panamá (PTY)</span></div>
+            <div class="campo"><label>Estado Sistema</label><span id="status-text" class="highlight">ONLINE</span></div>
+            <div class="campo"><label>Expediente</label><span id="ficha-email">Esperando datos...</span></div>
+            <div class="campo"><label>Nivel de Maduración</label><span id="ficha-progreso">0%</span></div>
+        </div>
     </div>
+
     <div class="chat-area">
         <div id="chat-window">
-            <div class="msg assistant">SISTEMA READY. <br>Soy Marc Guerra. Bienvenido a PSS. ¿Cuál es el objetivo empresarial o legal que desea alcanzar hoy?</div>
+            <div class="message assistant"><strong>[SISTEMA DE ADMISIÓN INICIADO]</strong><br><br>Bienvenido a Problems Solutions Services. Soy Marc Guerra. ¿Qué objetivo empresarial o legal busca resolver hoy en Panamá?</div>
         </div>
-        <form class="input-box" id="chat-form">
-            <input type="text" id="user-input" placeholder="Describa su situación..." autocomplete="off">
+        <form class="input-box" id="ai-chat-form">
+            <input type="text" id="ai-user-input" placeholder="Describa su requerimiento aquí..." autocomplete="off">
             <button type="submit">Enviar</button>
         </form>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+
+        // 1. CONFIGURACIONES
+        const firebaseConfig = {
+            apiKey: "AIzaSyCETd32nN4mhaqXvrJsAhWWU0euT-KXzv0",
+            authDomain: "studio-8152609190-513ee.firebaseapp.com",
+            projectId: "studio-8152609190-513ee",
+            storageBucket: "studio-8152609190-513ee.firebasestorage.app",
+            messagingSenderId: "391569117120",
+            appId: "1:391569117120:web:b2c07944de50726e8ac225"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         const WORKER_URL = 'https://pss-recepcion-v2.magwereplusy.workers.dev';
         const N8N_URL = 'https://lab.problemsolutionservices.com/webhook/62932402-5400-45ec-adac-2fb3f886292f';
 
-        let history = [];
-        let leadCaptured = false;
+        let chatHistory = [];
+        let leadSent = false;
         let interactionCount = 0;
+        let detectedEmail = null;
 
-        document.getElementById('chat-form').onsubmit = async (e) => {
+        const chatForm = document.getElementById('ai-chat-form');
+        const chatWindow = document.getElementById('ai-chat-window');
+        const orb = document.getElementById('ai-orb');
+
+        // 2. LÓGICA DEL CHAT
+        chatForm.onsubmit = async (e) => {
             e.preventDefault();
-            const input = document.getElementById('user-input');
+            const input = document.getElementById('ai-user-input');
             const msg = input.value.trim();
             if (!msg) return;
 
-            appendMsg('user', msg);
+            // Mostrar mensaje usuario
+            appendMessage('user', msg);
             input.value = '';
             interactionCount++;
-            document.getElementById('orb').classList.add('thinking');
+            
+            // Actualizar progreso
+            document.getElementById('ficha-progreso').innerText = (interactionCount * 20) + '%';
+            orb.classList.add('thinking');
+
+            // Escaneo proactivo de email
+            const emailMatch = msg.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+            if (emailMatch) {
+                detectedEmail = emailMatch[0];
+                document.getElementById('ficha-email').innerText = 'IDENTIFICADO';
+                document.getElementById('ficha-email').classList.add('highlight');
+            }
 
             try {
+                // LLAMADA AL CEREBRO (Cloudflare Worker)
                 const res = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mensaje: msg, historial: history })
+                    body: JSON.stringify({ mensaje: msg, historial: chatHistory })
                 });
+
                 const data = await res.json();
                 const reply = data.response;
 
-                appendMsg('assistant', reply);
-                history.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
+                // Mostrar respuesta de Marc
+                appendMessage('assistant', reply);
+                chatHistory.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
 
-                // --- TU INGENIERÍA DE MADURACIÓN ---
-                const fullConversation = history.map(h => h.content).join(" ");
-                const emailMatch = fullConversation.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g);
+                // 3. INGENIERÍA DE DISPARO A N8N (VM ORACLE)
+                // Se dispara si tenemos email Y (Charla madura o Marc da el OK)
+                if (detectedEmail && !leadSent && (interactionCount >= 5 || reply.includes('[EXPEDIENTE_LISTO]'))) {
+                    leadSent = true;
+                    
+                    const leadData = {
+                        email: detectedEmail,
+                        chatInput: msg,
+                        nombre: "Lead Portada Premium",
+                        historial: JSON.stringify(chatHistory),
+                        url_fuente: window.location.href
+                    };
 
-                if (emailMatch && !leadCaptured) {
-                    // Solo enviamos a n8n si han pasado 5 mensajes o si Marc puso la marca de éxito
-                    if (interactionCount >= 5 || reply.includes('[EXPEDIENTE_LISTO]')) {
-                        leadCaptured = true;
-                        document.getElementById('status').innerText = 'EXPEDIENTE ENVIADO';
-                        
-                        fetch(N8N_URL, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                chatInput: history[history.length - 2].content,
-                                email: emailMatch[0],
-                                nombre: "Lead Portada Premium",
-                                historial_completo: JSON.stringify(history)
-                            })
-                        });
-                    }
+                    // ENVÍO BLINDADO A N8N CON HEADERS (Arregla el correo vacío)
+                    await fetch(N8N_URL, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(leadData) 
+                    });
+
+                    // Guardado en Firebase
+                    addDoc(collection(db, "leads"), { ...leadData, timestamp: new Date().toISOString() });
+                    
+                    document.getElementById('status-text').innerText = 'LEAD_CAPTURED';
+                    document.getElementById('ficha-progreso').innerText = '100%';
                 }
+
             } catch (err) {
-                appendMsg('assistant', 'Error de sincronización. Reintentando...');
+                appendMessage('assistant', '⚠️ Nodo PTY ocupado. Sincronizando de nuevo...');
             } finally {
-                document.getElementById('orb').classList.remove('thinking');
+                orb.classList.remove('thinking');
             }
         };
 
-        function appendMsg(role, text) {
+        function appendMessage(role, text) {
             const div = document.createElement('div');
             div.className = `msg ${role}`;
-            div.innerText = text.replace('[EXPEDIENTE_LISTO]', '').trim();
-            const window = document.getElementById('chat-window');
-            window.appendChild(div);
-            window.scrollTop = window.scrollHeight;
+            // Filtramos etiquetas internas
+            div.innerHTML = text.replace('[EXPEDIENTE_LISTO]', '').trim();
+            chatWindow.appendChild(div);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
         }
     </script>
 </body>
