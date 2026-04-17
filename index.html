@@ -1,42 +1,196 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PSS | Digital Admission Center</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
     <style>
-        :root { --bg: #030712; --accent: #10b981; --blue: #1d4ed8; --glass: rgba(17, 24, 39, 0.8); }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg); color: #f8fafc; font-family: 'Inter', sans-serif; height: 100vh; display: flex; overflow: hidden; }
-        
-        .visual-area { width: 35%; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); background: radial-gradient(circle at center, #111827 0%, #030712 100%); }
-        .orb { width: 140px; height: 140px; background: var(--blue); border-radius: 50%; filter: blur(20px); box-shadow: 0 0 50px var(--blue); animation: pssPulse 4s infinite; }
-        .orb.thinking { background: var(--accent); box-shadow: 0 0 80px var(--accent); animation: pssPulse 0.6s infinite; }
-        
-        .ficha-tecnica { width: 85%; margin-top: 40px; background: var(--glass); border-radius: 12px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .ficha-tecnica h3 { font-size: 0.7rem; letter-spacing: 2px; color: var(--accent); margin-bottom: 15px; text-transform: uppercase; }
-        .campo { margin-bottom: 12px; font-size: 0.85rem; }
-        .campo label { display: block; opacity: 0.5; font-size: 0.6rem; text-transform: uppercase; margin-bottom: 3px; }
-        .highlight { color: var(--accent) !important; font-weight: 700; }
+        :root {
+            --bg: #030712;
+            --accent: #10b981;
+            --blue: #1d4ed8;
+            --glass: rgba(17, 24, 39, 0.8);
+        }
 
-        .chat-area { width: 65%; display: flex; flex-direction: column; padding: 50px; background: #030712; }
-        #chat-window { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
-        .msg { max-width: 85%; padding: 18px 22px; border-radius: 15px; line-height: 1.6; font-size: 1.05rem; animation: fadeIn 0.3s ease; }
-        .assistant { background: var(--glass); border-left: 4px solid var(--accent); align-self: flex-start; }
-        .user { background: var(--blue); align-self: flex-end; color: white; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-        .input-box { margin-top: 30px; display: flex; gap: 10px; background: #111827; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
-        input { flex: 1; background: transparent; border: none; color: white; outline: none; font-size: 1.1rem; }
-        button { background: var(--accent); color: #030712; border: none; padding: 10px 30px; border-radius: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+        body {
+            background-color: var(--bg);
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
 
-        @keyframes pssPulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 0.7; } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .visual-area {
+            width: 35%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+        }
+
+        .orb {
+            width: 140px;
+            height: 140px;
+            background: var(--blue);
+            border-radius: 50%;
+            filter: blur(20px);
+            box-shadow: 0 0 50px var(--blue);
+            animation: pssPulse 4s infinite;
+        }
+
+        .orb.thinking {
+            background: var(--accent);
+            box-shadow: 0 0 80px var(--accent);
+            animation: pssPulse 0.6s infinite;
+        }
+
+        .ficha-tecnica {
+            width: 85%;
+            margin-top: 40px;
+            background: var(--glass);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ficha-tecnica h3 {
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .campo {
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+        }
+
+        .campo label {
+            display: block;
+            opacity: 0.5;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .highlight {
+            color: var(--accent) !important;
+            font-weight: 700;
+        }
+
+        .chat-area {
+            width: 65%;
+            display: flex;
+            flex-direction: column;
+            padding: 50px;
+            background: #030712;
+        }
+
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .msg {
+            max-width: 85%;
+            padding: 18px 22px;
+            border-radius: 15px;
+            line-height: 1.6;
+            font-size: 1.05rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .assistant {
+            background: var(--glass);
+            border-left: 4px solid var(--accent);
+            align-self: flex-start;
+        }
+
+        .user {
+            background: var(--blue);
+            align-self: flex-end;
+            color: white;
+        }
+
+        .input-box {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            background: #111827;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            font-size: 1.1rem;
+        }
+
+        button {
+            background: var(--accent);
+            color: #030712;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        @keyframes pssPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="visual-area">
-        <div style="position:absolute; top:40px; font-family:'Montserrat'; font-weight:800; letter-spacing:4px;">PSS <span style="color:var(--accent)">LABS</span></div>
+        <div style="position:absolute; top:40px; font-family:'Montserrat'; font-weight:800; letter-spacing:4px;">PSS
+            <span style="color:var(--accent)">LABS</span>
+        </div>
         <div class="orb" id="orb"></div>
         <div class="ficha-tecnica">
             <h3>Expediente de Admisión</h3>
@@ -48,10 +202,11 @@
     </div>
     <div class="chat-area">
         <div id="chat-window">
-            <div class="msg assistant">SISTEMA READY. <br>Soy Marc Guerra. Bienvenido a Problems Solutions. ¿Como le podemos ayudar hoy?</div>
+            <div class="msg assistant">RECEPCIÓN PSS <br>Soy Marc Guerra. Bienvenido a Problems Solutions Services. ¿En
+                qué le puedo ayudar hoy?</div>
         </div>
         <form class="input-box" id="chat-form">
-            <input type="text" id="user-input" placeholder="Describa su situación estratégica..." autocomplete="off">
+            <input type="text" id="user-input" placeholder="Describa su consulta..." autocomplete="off">
             <button type="submit">Enviar</button>
         </form>
     </div>
@@ -102,7 +257,7 @@
                 });
                 const data = await res.json();
                 const reply = data.response;
-                
+
                 appendMsg('assistant', reply);
                 history.push({ role: 'user', content: msg }, { role: 'assistant', content: reply });
 
@@ -110,7 +265,7 @@
                 if (detectedEmail && !leadCaptured && (interactionCount >= 5 || reply.includes('[EXPEDIENTE_LISTO]'))) {
                     leadCaptured = true;
                     document.getElementById('status-text').innerText = 'LEAD_CAPTURED';
-                    
+
                     fetch(N8N_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }, // <--- ESTO ARREGLA EL CORREO VACÍO EN ORACLE
@@ -127,21 +282,21 @@
                     addDoc(collection(db, "leads"), { email: detectedEmail, chatInput: msg, timestamp: new Date().toISOString() });
                 }
             } catch (err) {
-    console.error('Error communicating with Worker:', err);
-    if (err.message.includes('CORS') || err.message.includes('NetworkError')) {
-        appendMsg('assistant', '🔄 Error de conexión. Verificando configuración del sistema...');
-        // Retry logic for CORS errors
-        setTimeout(() => {
-            appendMsg('assistant', '✅ Sistema reconectado. Puede continuar su consulta.');
-        }, 2000);
-    } else if (err.message.includes('HTTP 500')) {
-        appendMsg('assistant', '⚠️ Sistema temporalmente ocupado. Procesando su solicitud...');
-    } else {
-        appendMsg('assistant', '⚠️ Error de comunicación. Intente nuevamente en unos momentos.');
-    }
-} finally {
-    document.getElementById('orb').classList.remove('thinking');
-}
+                console.error('Error communicating with Worker:', err);
+                if (err.message.includes('CORS') || err.message.includes('NetworkError')) {
+                    appendMsg('assistant', '🔄 Error de conexión. Verificando configuración del sistema...');
+                    // Retry logic for CORS errors
+                    setTimeout(() => {
+                        appendMsg('assistant', '✅ Sistema reconectado. Puede continuar su consulta.');
+                    }, 2000);
+                } else if (err.message.includes('HTTP 500')) {
+                    appendMsg('assistant', '⚠️ Sistema temporalmente ocupado. Procesando su solicitud...');
+                } else {
+                    appendMsg('assistant', '⚠️ Error de comunicación. Intente nuevamente en unos momentos.');
+                }
+            } finally {
+                document.getElementById('orb').classList.remove('thinking');
+            }
         };
 
         function appendMsg(role, text) {
@@ -154,4 +309,5 @@
         }
     </script>
 </body>
+
 </html>
