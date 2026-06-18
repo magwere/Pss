@@ -88,7 +88,7 @@ CIERRE DE CONVERSACIÓN: Si tienes Nombre, Correo y Necesidad clara, añade [EXP
         }
       }
 
-      const answer = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      const answer = await env.AI.run('@cf/zai-org/glm-4.7-flash', {
         messages: [
           { role: 'system', content: systemPrompt },
           ...(historial || []),
